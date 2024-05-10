@@ -220,6 +220,7 @@ async function validateUserId (user) {
   const sql = 'SELECT * FROM user WHERE id = ?'
   try {
     const [rows, fields] = await pool.query(sql, user.id)
+    console.log(fields)
     if (rows.length > 0) {
       throw new Error(JSON.stringify({
         id: user.id,
@@ -238,6 +239,7 @@ async function validateUserEmail (user) {
   const sql = 'SELECT * FROM user WHERE correo = ?'
   try {
     const [rows, fields] = await pool.query(sql, user.correo)
+    console.log(fields)
     if (rows.length > 0) {
       throw new Error(JSON.stringify({
         id: user.id,
