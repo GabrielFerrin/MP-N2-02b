@@ -56,7 +56,7 @@ export async function importUsers (req, res) {
     // los errores en caso de existir como mínimo uno.
     const preUsers = await getUsersFromFile(req)
     const results = []
-    const users = await validateUsersFields(preUsers, results)
+    const users = await validateUsers(preUsers, results)
     await saveUsers(users, results)
     res.writeHead(200, { 'Content-Type': 'application/json' })
     res.end(JSON.stringify({ message: results }))
@@ -150,12 +150,12 @@ function parseCsv (csvFile) {
 }
 
 // Internal | Save Users
-async function saveUsers (users, results) {
+export async function saveUsers (users, results) {
   if (!users) { throw new Error('No users provided') }
   for (let i = 0; i < users.length; i++) {
     const user = users[i]
     try {
-      const result = await saveUser(user, results)
+      const result = await saveUser(user)
       results.push(result)
     } catch (err) {
       results.push(JSON.parse(err.message))
@@ -165,7 +165,59 @@ async function saveUsers (users, results) {
 
 // Internal | Save User
 async function saveUser (user) {
+  // TODO: salta validación
+  // TODO: no puedo separar el código en funciones asíncronas
+  // separadas
   return new Promise((resolve, reject) => {
+    // validate user id
+    if (user.id !== undefined) {
+      const sqlId = 'SELECT * FROM user WHERE id = ?'
+      pool.query(sqlId, user.id, (err, result) => {
+        if (err) {
+          reject(new Error(JSON.stringify({
+            id: user.id,
+            nombres: user.nombres,
+            message: 'Unable to validate user in the database',
+            error: err.message
+          })))
+        } else if (result.length > 0) {
+          reject(new Error(JSON.stringify({
+            id: user.id,
+            nombres: user.nombres,
+            message: 'ID: ' + user.id +
+            ' already exists in the database'
+          })))
+        }
+      })
+    }
+    // validate email
+    if (user.correo === undefined) {
+      const sqlEmail = 'SELECT * FROM user WHERE correo = ?'
+      pool.query(sqlEmail, user.correo, (err, result) => {
+        if (err) {
+          reject(new Error(JSON.stringify({
+            id: user.id,
+            nombres: user.nombres,
+            message: 'Unable to validate user in the database',
+            error: err.message
+          })))
+        } else if (result.length > 0) {
+          reject(new Error(JSON.stringify({
+            id: user.id,
+            nombres: user.nombres,
+            message: 'Email: ' + user.correo +
+          ' already exists in the database'
+          })))
+        } else {
+          resolve({
+            id: user.id,
+            nombres: user.nombres,
+            message: 'success'
+          })
+        }
+      })
+    }
+    // save user
     const sql = 'INSERT INTO user SET ?'
     pool.query(sql, user, (err) => {
       if (err) {
@@ -187,12 +239,12 @@ async function saveUser (user) {
 }
 
 // Internal | Validate Users
-export function validateUsersFields (preUsers, results) {
+export function validateUsers (preUsers, results) {
   const invalidList = []
   const length = preUsers.length
   for (let i = 0; i < length; i++) {
     const user = preUsers[i]
-    const isValid = validateUserFields(user, results)
+    const isValid = validateUser(user, results)
     if (!isValid) {
       invalidList.push(user.id)
     }
@@ -201,15 +253,15 @@ export function validateUsersFields (preUsers, results) {
 }
 
 // Internal | Validate User
-function validateUserFields (user, results) {
+function validateUser (user, results) {
   const errorsList = []
   if (!user?.nombres) errorsList.push('Falta el campo "nombres"')
-  // if (!user.apellidos) errorsList.push('Falta el apellido')
-  // if (!user.direccion) errorsList.push('Falta la dirección')
-  // if (!user.correo) errorsList.push('Falta el correo')
-  // if (!user.dni) errorsList.push('Falta el DNI')
-  // if (!user.edad) errorsList.push('Falta la edad')
-  // if (!user.telefono) errorsList.push('Falta el teléfono')
+  if (!user?.apellidos) errorsList.push('Falta el campo "apellido"')
+  if (!user?.direccion) errorsList.push('Falta el campo "dirección"')
+  if (!user?.correo) errorsList.push('Falta el campo "correo"')
+  if (!user?.dni) errorsList.push('Falta el campo "DNI"')
+  if (!user?.edad) errorsList.push('Falta el campo "edad"')
+  if (!user?.telefono) errorsList.push('Falta el campo "teléfono"')
   if (errorsList.length > 0) {
     results.push({
       id: user?.id || '',

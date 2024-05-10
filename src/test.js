@@ -69,7 +69,7 @@ export const testUsers = [
   // },
   {
     id: 7,
-    // nombres: 'Ramiro',
+    nombres: 'Ramiro',
     apellidos: 'Parrales',
     direccion: 'Su casa',
     correo: 'ramiro@gmail.com',
@@ -79,11 +79,11 @@ export const testUsers = [
     telefono: '+593-98-341-1576'
   },
   {
-    id: 8,
+    // id: 12,
     nombres: 'Paul',
     apellidos: 'Ferrin',
     direccion: 'Mi casa',
-    correo: 'addgferrin@gsmail.com',
+    correo: 'ramiro@gmail.com',
     dni: 1234746387,
     edad: 15,
     fecha_creacion: '2024-05-06 00:00:00',

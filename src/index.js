@@ -1,6 +1,9 @@
 import { createServer } from 'node:http'
 import { PORT } from './config.js'
-import { getUsers, homePage, exportUsers, importUsers, validateUsersFields }
+import {
+  getUsers, homePage, exportUsers, importUsers,
+  validateUsers, saveUsers
+}
   from './controller.js'
 import { test, testUsers } from './test.js'
 
@@ -39,7 +42,7 @@ server.listen(3000, () => console.log(serverMessage))
 // TESTS
 if (test) {
   const results = []
-  const users = validateUsersFields(testUsers, results)
-  console.log('index: users', users)
-  // console.log(results)
+  const users = validateUsers(testUsers, results)
+  await saveUsers(users, results)
+  console.log(results)
 }
