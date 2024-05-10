@@ -2,3 +2,9 @@ GET http://localhost:3000
 
 ###
 GET http://localhost:3000/api/usuarios
+
+###
+GET http://localhost:3000/api/usuarios/export
+
+###
+POST http://localhost:3000/api/usuarios/import
