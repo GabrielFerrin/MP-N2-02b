@@ -51,9 +51,6 @@ export async function exportUsers (res) {
 // POST | Import Users
 export async function importUsers (req, res) {
   try {
-    // TODO: verificar si se envían los errores junto
-    // con los succeses. Es posible que solo se envien
-    // los errores en caso de existir como mínimo uno.
     const preUsers = await getUsersFromFile(req)
     const results = []
     const users = await validateUsers(preUsers, results)
@@ -155,8 +152,7 @@ export async function saveUsers (users, results) {
   for (let i = 0; i < users.length; i++) {
     const user = users[i]
     try {
-      const result = await saveUser(user)
-      results.push(result)
+      results.push(await saveUser(user))
     } catch (err) {
       results.push(JSON.parse(err.message))
     }
@@ -165,57 +161,18 @@ export async function saveUsers (users, results) {
 
 // Internal | Save User
 async function saveUser (user) {
-  // TODO: salta validación
-  // TODO: no puedo separar el código en funciones asíncronas
-  // separadas
   return new Promise((resolve, reject) => {
+    // TODO: la validación del Id y correo no siempre
+    // funciona.
     // validate user id
     if (user.id !== undefined) {
-      const sqlId = 'SELECT * FROM user WHERE id = ?'
-      pool.query(sqlId, user.id, (err, result) => {
-        if (err) {
-          reject(new Error(JSON.stringify({
-            id: user.id,
-            nombres: user.nombres,
-            message: 'Unable to validate user in the database',
-            error: err.message
-          })))
-        } else if (result.length > 0) {
-          reject(new Error(JSON.stringify({
-            id: user.id,
-            nombres: user.nombres,
-            message: 'ID: ' + user.id +
-            ' already exists in the database'
-          })))
-        }
-      })
+      validateUserId(user, reject)
+        .catch(error => { reject(error) })
     }
     // validate email
-    if (user.correo === undefined) {
-      const sqlEmail = 'SELECT * FROM user WHERE correo = ?'
-      pool.query(sqlEmail, user.correo, (err, result) => {
-        if (err) {
-          reject(new Error(JSON.stringify({
-            id: user.id,
-            nombres: user.nombres,
-            message: 'Unable to validate user in the database',
-            error: err.message
-          })))
-        } else if (result.length > 0) {
-          reject(new Error(JSON.stringify({
-            id: user.id,
-            nombres: user.nombres,
-            message: 'Email: ' + user.correo +
-          ' already exists in the database'
-          })))
-        } else {
-          resolve({
-            id: user.id,
-            nombres: user.nombres,
-            message: 'success'
-          })
-        }
-      })
+    if (user.correo !== undefined) {
+      validateUserEmail(user, reject)
+        .catch(error => { reject(error) })
     }
     // save user
     const sql = 'INSERT INTO user SET ?'
@@ -241,14 +198,9 @@ async function saveUser (user) {
 // Internal | Validate Users
 export function validateUsers (preUsers, results) {
   const invalidList = []
-  const length = preUsers.length
-  for (let i = 0; i < length; i++) {
-    const user = preUsers[i]
-    const isValid = validateUser(user, results)
-    if (!isValid) {
-      invalidList.push(user.id)
-    }
-  }
+  preUsers.forEach((user, i) => {
+    if (!validateUser(user, results)) { invalidList.push(user.id) }
+  })
   return preUsers.filter((user) => !invalidList.includes(user.id))
 }
 
@@ -271,6 +223,50 @@ function validateUser (user, results) {
     })
     return false
   } else return true
+}
+
+// Internal | Validate User Id
+async function validateUserId (user, reject) {
+  const sql = 'SELECT * FROM user WHERE id = ?'
+  pool.query(sql, user.id, (err, result) => {
+    if (err) {
+      throw new Error(JSON.stringify({
+        id: user.id,
+        nombres: user.nombres,
+        message: 'Unable to validate user in the database',
+        error: err.message
+      }))
+    } else if (result.length > 0) {
+      reject(new Error(JSON.stringify({
+        id: user.id,
+        nombres: user.nombres,
+        message: 'Id: ' + user.id +
+          ' already exists in the database'
+      })))
+    }
+  })
+}
+
+// Internal | Validate User Email
+async function validateUserEmail (user, reject) {
+  const sql = 'SELECT * FROM user WHERE correo = ?'
+  pool.query(sql, user.correo, (err, result) => {
+    if (err) {
+      reject(new Error(JSON.stringify({
+        id: user.id,
+        nombres: user.nombres,
+        message: 'Unable to validate user in the database',
+        error: err.message
+      })))
+    } else if (result.length > 0) {
+      reject(new Error(JSON.stringify({
+        id: user.id,
+        nombres: user.nombres,
+        message: 'Email: ' + user.correo +
+          ' already exists in the database'
+      })))
+    }
+  })
 }
 
 // DB
