@@ -39,7 +39,7 @@ const server = createServer((req, res) => {
 const serverMessage = `Server running on http://localhost:${PORT}`
 server.listen(3000, () => console.log(serverMessage))
 
-// TESTS
+// TESTS: executed if test is true in test.js
 if (test) {
   const results = []
   const users = validateUsers(testUsers, results)
