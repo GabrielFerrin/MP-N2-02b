@@ -1,4 +1,4 @@
-import mysql2 from 'mysql2'
+import mysql2 from 'mysql2/promise'
 import { DB_HOST, DB_USER, DB_PASSWORD, DB_DATABASE }
   from './config.js'
 import fs from 'node:fs'
@@ -161,38 +161,28 @@ export async function saveUsers (users, results) {
 
 // Internal | Save User
 async function saveUser (user) {
-  return new Promise((resolve, reject) => {
-    // TODO: la validación del Id y correo no siempre
-    // funciona.
-    // validate user id
-    if (user.id !== undefined) {
-      validateUserId(user, reject)
-        .catch(error => { reject(error) })
+  if (!user) { throw new Error({ message: 'No user provided' }) }
+  // validate user id
+  if (user.id !== undefined) await validateUserId(user)
+  // validate email
+  if (user.correo !== undefined) await validateUserEmail(user)
+  // save user
+  const sql = 'INSERT INTO user SET ?'
+  try {
+    await pool.query(sql, user)
+    return {
+      id: user.id,
+      nombres: user.nombres,
+      message: 'success'
     }
-    // validate email
-    if (user.correo !== undefined) {
-      validateUserEmail(user, reject)
-        .catch(error => { reject(error) })
-    }
-    // save user
-    const sql = 'INSERT INTO user SET ?'
-    pool.query(sql, user, (err) => {
-      if (err) {
-        reject(new Error(JSON.stringify({
-          id: user.id,
-          nombres: user.nombres,
-          message: 'Unable to save user in the database',
-          error: err.message
-        })))
-      } else {
-        resolve({
-          id: user.id,
-          nombres: user.nombres,
-          message: 'success'
-        })
-      }
-    })
-  })
+  } catch (err) {
+    throw new Error(JSON.stringify({
+      id: user.id,
+      nombres: user.nombres,
+      message: 'Unable to save user in the database',
+      error: err.message
+    }))
+  }
 }
 
 // Internal | Validate Users
@@ -226,47 +216,39 @@ function validateUser (user, results) {
 }
 
 // Internal | Validate User Id
-async function validateUserId (user, reject) {
+async function validateUserId (user) {
   const sql = 'SELECT * FROM user WHERE id = ?'
-  pool.query(sql, user.id, (err, result) => {
-    if (err) {
+  try {
+    const [rows, fields] = await pool.query(sql, user.id)
+    if (rows.length > 0) {
       throw new Error(JSON.stringify({
-        id: user.id,
-        nombres: user.nombres,
-        message: 'Unable to validate user in the database',
-        error: err.message
-      }))
-    } else if (result.length > 0) {
-      reject(new Error(JSON.stringify({
         id: user.id,
         nombres: user.nombres,
         message: 'Id: ' + user.id +
           ' already exists in the database'
-      })))
+      }))
     }
-  })
+  } catch (err) {
+    throw new Error(err.message)
+  }
 }
 
 // Internal | Validate User Email
-async function validateUserEmail (user, reject) {
+async function validateUserEmail (user) {
   const sql = 'SELECT * FROM user WHERE correo = ?'
-  pool.query(sql, user.correo, (err, result) => {
-    if (err) {
-      reject(new Error(JSON.stringify({
-        id: user.id,
-        nombres: user.nombres,
-        message: 'Unable to validate user in the database',
-        error: err.message
-      })))
-    } else if (result.length > 0) {
-      reject(new Error(JSON.stringify({
+  try {
+    const [rows, fields] = await pool.query(sql, user.correo)
+    if (rows.length > 0) {
+      throw new Error(JSON.stringify({
         id: user.id,
         nombres: user.nombres,
         message: 'Email: ' + user.correo +
-          ' already exists in the database'
-      })))
+      ' ya está registrado'
+      }))
     }
-  })
+  } catch (err) {
+    throw new Error(err.message)
+  }
 }
 
 // DB
