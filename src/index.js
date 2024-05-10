@@ -7,7 +7,16 @@ import {
   from './controller.js'
 import { test, testUsers } from './test.js'
 
-// PREGUNTAS: Line 13 | Se necesita await? Funciona sin await.
+// COMMENTS:
+// - El método POST (/api/usuarios/import) obtiene un archivo
+//   que viene del cliente en el cuerpo de la petición.
+//   y con eso realiza la importación de los usuarios
+// - Se valida que no ser repitan el Id y el correo.
+// - Se valida que los campos estén presentes, con excepción
+//   de la fecha de creación y el id, los cuales se crean
+//   automaticamente. Si el campo Id está presenta se lo
+//   usa para crear el usuario.
+// - El archivo de la base de datos está en la raiz del proyecto.
 
 const server = createServer((req, res) => {
   if (req.method === 'GET') {
